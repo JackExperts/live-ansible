@@ -1,0 +1,8 @@
+- name: Create Infra GCP
+  hosts: local
+  vars:
+    gcp_project: concise-complex-263600
+    gcp_cred_file: inventory/concise-complex-263600-63f9017befe3.json
+    gcp_cred_kind: serviceaccount
+  roles:
+    - roles/Terraformation/Gcp

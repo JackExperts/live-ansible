@@ -1,0 +1,37 @@
+- name: Creating servers in GCE
+  gce:
+     machine_type: "{{ machine_type }}"
+     image: "{{ image }}"
+     service_account_email: "{{ service_account_email }}"
+     credentials_file: "{{ credentials_file }}"
+     project_id: "{{ project_id }}"
+     zone: "{{ item.zone }}"
+     state: present
+     preemptible: false
+     instance_names: "{{ item.instance_names }}"
+     metadata: '{ "ssh-keys" : "rodrigosouza:ssh-rsa <sua chave SSH>" }'
+     tags:
+        - http-server
+        - https-server
+        - all-traffic
+  loop:
+    - { instance_names: 'webpx01', zone: 'us-west1-b' }
+    - { instance_names: 'bdpx01', zone: 'us-west4-a' }
+  register: gce_hosts
+
+- debug:
+    var: gce_hosts.results[ item ].instance_data[0].public_ip
+  with_items:
+    - 0
+    - 1
+
+- name: Waiting for instances to start (checking ssh)
+  wait_for:
+    delay: 30
+    host: "{{ gce_hosts.results[ item ].instance_data[0].public_ip }}"
+    port: 22
+    state: started
+    timeout: 180
+  with_items:
+    - 0
+    - 1

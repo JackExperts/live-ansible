@@ -1,0 +1,14 @@
+plugin: gcp_compute
+projects:
+  - concise-complex-263600
+regions:
+  - "us-west1-b"
+  - "us-west4-a"
+filters: []
+keyed_groups:
+  - key: zone
+groups:
+  webservers: "'app' in name"
+  dbservers: "'bd' in name"
+auth_kind: serviceaccount
+service_account_file: "/Users/rodrigosouza/ansible/webinarcsno/inventory/concise-complex-263600-63f9017befe3.json"

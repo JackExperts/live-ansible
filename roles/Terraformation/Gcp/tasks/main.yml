@@ -1,0 +1,91 @@
+- name: Create disks
+  gcp_compute_disk:
+    name: "{{ item.name }}"
+    size_gb: "{{ gcp_size_disk }}"
+    source_image: "{{ item.image }}"
+    zone: "{{ item.zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  loop:
+    - { name: 'app-live', zone: 'us-west1-b', image: 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2004-lts' }
+    - { name: 'bd-live', zone: 'us-west4-a', image: 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2004-lts' }
+  register: disk
+
+- name: Create Public IP
+  gcp_compute_address:
+    name: "{{ item.name }}"
+    region: "{{ item.zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  loop:
+    - { name: 'app-live', zone: 'us-west1' }
+    - { name: 'bd-live', zone: 'us-west4' }
+  register: address
+
+- name: Create firewall
+  gcp_compute_firewall:
+    name: live-jac
+    allowed:
+    - ip_protocol: all
+    target_tags:
+    - live-jac
+    source_ranges: "{{ source_ranges_firewall }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  register: firewall
+
+- name: Create instance
+  gcp_compute_instance:
+    name: "{{ item.name }}"
+    machine_type: "{{ flavor }}"
+    metadata: '{ "ssh-keys" : "rodrigosouza:ssh-rsa <sua chave SSH>" }'
+    disks:
+    - auto_delete: 'true'
+      boot: 'true'
+      source:  "{{ disk.results[item.id] }}"
+    labels:
+      environment: "{{ type_environment }}"
+    network_interfaces:
+    - network: {"selfLink": "global/networks/default"}
+      access_configs:
+      - name: External NAT
+        nat_ip: "{{ address.results[item.id] }}"
+        type: ONE_TO_ONE_NAT
+    zone: "{{ item.zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    tags:
+      items:
+        -  live-jac
+    state: present
+  loop:
+    - { name: 'app-live', id: 0, zone: 'us-west1-b' }
+    - { name: 'bd-live', id: 1 , zone: 'us-west4-a' }
+  ignore_errors: yes
+  register: gcp_hosts
+  when:
+    - address is success
+    - firewall is success
+
+- name: Validade servers
+  debug:
+    var: gcp_hosts.results
+
+- name: Waiting for SSH
+  wait_for:
+    delay: 30
+    host: "{{ gcp_hosts.results[item].networkInterfaces[0].accessConfigs[0].natIP }}"
+    port: 22
+    state: started
+    timeout: 180
+  ignore_errors: yes
+  loop:
+    - 0
+    - 1

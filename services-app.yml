@@ -1,0 +1,7 @@
+- name: Starting orquestrationing of Application
+  gather_facts: yes
+  hosts: webservers
+  connection: ssh
+  become: yes
+  roles:
+    - roles/Services/Apache

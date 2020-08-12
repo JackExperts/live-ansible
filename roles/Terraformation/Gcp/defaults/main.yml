@@ -1,0 +1,8 @@
+gcp_project: xxxxxx-xxxxx-264000
+gcp_cred_file: xxxxx-xxxxxx-264000-xxxxxxxx.json
+gcp_cred_kind: serviceaccount
+gcp_size_disk: 50
+image: xxxxxx/xxxxxx-os-cloud/xxxxxx/images/family/ubuntu-1604-lts
+source_ranges_firewall: "0.0.0.0/0"
+flavor: n1-standard-1
+type_environment: production
